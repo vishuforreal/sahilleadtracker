@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sahil's Leads Tracker</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>📊</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header with Theme Toggle -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="icon">📊</i> Sahil's Leads Tracker</h1>
+                <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">
+                    <span class="sun">☀️</span>
+                    <span class="moon">🌙</span>
+                </button>
+            </div>
+        </header>
+        
+        <!-- Top Action Bar -->
+        <div class="action-bar">
+            <button id="addNewBtn" class="btn btn-primary">
+                <i class="icon">➕</i> Add New
+            </button>
+            <button id="updateBtn" class="btn btn-secondary">
+                <i class="icon">✏️</i> Update
+            </button>
+            <button id="deleteBtn" class="btn btn-danger">
+                <i class="icon">🗑️</i> Delete
+            </button>
+            <button onclick="window.location.href='contest.html'" class="btn btn-primary">
+                <i class="icon">🏆</i> Contest
+            </button>
+        </div>
+
+        <!-- Search Section -->
+        <div class="search-section card">
+            <h3><i class="icon">🔍</i> Search Records</h3>
+            <div class="search-controls">
+                <select id="searchType">
+                    <option value="loanCode">Loan Code</option>
+                    <option value="applicationId">Application ID</option>
+                    <option value="mobileNumber">Mobile Number</option>
+                </select>
+                <input type="text" id="searchValue" placeholder="Enter search value">
+                <button id="searchBtn" class="btn btn-info">
+                    <i class="icon">🔍</i> Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Search Results -->
+        <div id="searchResults" class="search-results card" style="display: none;">
+            <div class="search-results-header">
+                <h3><i class="icon">📋</i> Search Results</h3>
+                <button class="close-search" onclick="hideSearchResults()">
+                    <i class="icon">❌</i>
+                </button>
+            </div>
+            <div id="resultsTable"></div>
+        </div>
+
+        <!-- Status Count -->
+        <div class="status-count-section card">
+            <h3><i class="icon">📈</i> Status Count</h3>
+            <table class="status-count-table">
+                <thead>
+                    <tr>
+                        <th>Type</th>
+                        <th>Doc Pending</th>
+                        <th>Hot Lead</th>
+                        <th>Recheck</th>
+                        <th>Pending</th>
+                        <th>AWH</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>Today Count</strong></td>
+                        <td id="todayDocPending">0</td>
+                        <td id="todayHotLead">0</td>
+                        <td id="todayRecheck">0</td>
+                        <td id="todayPending">0</td>
+                        <td id="todayAwh">0</td>
+                    </tr>
+                    <tr>
+                        <td><strong>Total Count</strong></td>
+                        <td id="totalDocPending">0</td>
+                        <td id="totalHotLead">0</td>
+                        <td id="totalRecheck">0</td>
+                        <td id="totalPending">0</td>
+                        <td id="totalAwh">0</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Today's Data Table -->
+        <div class="data-table-section card">
+            <h3><i class="icon">📋</i> Today's Records</h3>
+            <div id="todaysDataTable"></div>
+        </div>
+
+        <!-- Modal for Add/Update -->
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <h2 id="modalTitle">Add New Record</h2>
+                <form id="recordForm">
+                    <div class="form-group">
+                        <label for="loanCode">Loan Code: <span style="color: red;">*</span></label>
+                        <input type="text" id="loanCode" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="applicationId">Application ID:</label>
+                        <input type="text" id="applicationId">
+                    </div>
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="mobileNumber">Mobile Number:</label>
+                        <input type="number" id="mobileNumber">
+                    </div>
+                    <div class="form-group">
+                        <label for="status">Status:</label>
+                        <select id="status">
+                            <option value="">Select Status</option>
+                            <option value="Doc Pending">Doc Pending</option>
+                            <option value="Hot Lead">Hot Lead</option>
+                            <option value="Recheck">Recheck</option>
+                            <option value="Pending">Pending</option>
+                            <option value="AWH">AWH</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="subStatus">Sub-Status:</label>
+                        <select id="subStatus">
+                            <option value="">Select Sub-Status</option>
+                            <option value="Mudra">Mudra</option>
+                            <option value="SE">SE</option>
+                            <option value="HIGH ABC">HIGH ABC</option>
+                            <option value="Normal">Normal</option>
+                            <option value="Auto HL">Auto HL</option>
+                            <option value="Force HL">Force HL</option>
+                            <option value="Post HL">Post HL</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="remarks">Remarks:</label>
+                        <textarea id="remarks" rows="3"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="icon">💾</i> Save
+                        </button>
+                        <button type="button" id="cancelBtn" class="btn btn-secondary">
+                            <i class="icon">❌</i> Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        <div id="deleteModal" class="modal">
+            <div class="modal-content">
+                <span class="close-delete">&times;</span>
+                <h2>Delete Record</h2>
+                <div class="form-group">
+                    <label for="deleteLoanCode">Enter Loan Code to Delete:</label>
+                    <input type="text" id="deleteLoanCode" required>
+                    <button id="fetchDeleteBtn" class="btn btn-info">
+                        <i class="icon">🔍</i> Fetch Record
+                    </button>
+                </div>
+                <div id="deleteRecordDisplay"></div>
+                <div class="form-actions" id="deleteActions" style="display: none;">
+                    <button id="confirmDeleteBtn" class="btn btn-danger">
+                        <i class="icon">🗑️</i> Confirm Delete
+                    </button>
+                    <button id="cancelDeleteBtn" class="btn btn-secondary">
+                        <i class="icon">❌</i> Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Update Search Modal -->
+        <div id="updateModal" class="modal">
+            <div class="modal-content">
+                <span class="close-update">&times;</span>
+                <h2>Update Record</h2>
+                <div class="form-group">
+                    <label for="updateLoanCode">Enter Loan Code to Update:</label>
+                    <input type="text" id="updateLoanCode" required>
+                    <button id="fetchUpdateBtn" class="btn btn-info">
+                        <i class="icon">🔍</i> Fetch Record
+                    </button>
+                </div>
+                <div id="updateRecordDisplay"></div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Messages -->
+        <div id="message" class="message"></div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© 2026 | Developed with ❤️ by <a href="https://mainlyvishwajeet.netlify.app" target="_blank" rel="noopener noreferrer">Vishwajeet</a></p>
+        </footer>
+    </div>
+
+    <!-- App Scripts -->
+    <script src="script.js"></script>
+</body>
+</html>

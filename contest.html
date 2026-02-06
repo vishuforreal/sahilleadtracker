@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contest Tracker - Sahil's Leads</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🏆</text></svg>">
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="contest.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="icon">🏆</i> Contest Tracker</h1>
+                <div style="display: flex; gap: 15px; align-items: center;">
+                    <button onclick="window.location.href='index.html'" class="btn btn-secondary" style="min-width: auto; padding: 12px 20px;">
+                        <i class="icon">🏠</i> Home
+                    </button>
+                    <button id="themeToggle" class="theme-toggle" title="Toggle Dark Mode">
+                        <span class="sun">☀️</span>
+                        <span class="moon">🌙</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Add Contest Button -->
+        <div class="action-bar">
+            <button id="addContestBtn" class="btn btn-primary">
+                <i class="icon">➕</i> Add New Contest
+            </button>
+        </div>
+
+        <!-- Active Contests -->
+        <div id="activeContests"></div>
+
+        <!-- Add Contest Modal -->
+        <div id="contestModal" class="modal">
+            <div class="modal-content">
+                <span class="close-contest">&times;</span>
+                <h2><i class="icon">🏆</i> Add New Contest</h2>
+                <form id="contestForm">
+                    <div class="form-group">
+                        <label>Contest Name:</label>
+                        <input type="text" id="contestName" required placeholder="e.g., February Hot Lead Challenge">
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Start Date:</label>
+                            <input type="date" id="startDate" required>
+                        </div>
+                        <div class="form-group">
+                            <label>End Date:</label>
+                            <input type="date" id="endDate" required>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0;">
+                        <h3 style="margin: 0;">Slabs</h3>
+                        <button type="button" id="addSlabBtn" class="btn-icon" style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white;" title="Add Slab">
+                            ➕
+                        </button>
+                    </div>
+
+                    <div id="slabsContainer"></div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="icon">💾</i> Save Contest
+                        </button>
+                        <button type="button" id="cancelContestBtn" class="btn btn-secondary">
+                            <i class="icon">❌</i> Cancel
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Messages -->
+        <div id="message" class="message"></div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>© 2026 | Developed with ❤️ by <a href="https://mainly_vishwajeet.netlify.app" target="_blank" rel="noopener noreferrer">Vishwajeet</a></p>
+        </footer>
+    </div>
+
+    <script src="contest.js"></script>
+</body>
+</html>
