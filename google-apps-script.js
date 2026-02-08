@@ -30,6 +30,8 @@ function doGet(e) {
         return getTotalStatusCount();
       case 'getTodaysData':
         return getTodaysData();
+      case 'getNonHotLeadData':
+        return getNonHotLeadData();
       case 'getRecord':
         return getRecord(e.parameter.loanCode);
       case 'searchRecords':
@@ -65,6 +67,8 @@ function doPost(e) {
         return saveContest(contestData);
       case 'deleteContest':
         return deleteContest(e.parameter.contestId);
+      case 'updateStatus':
+        return updateStatus(e.parameter.loanCode, e.parameter.status, e.parameter.subStatus, parseInt(e.parameter.rowIndex));
       default:
         return createResponse(false, 'Invalid action');
     }
@@ -165,6 +169,29 @@ function updateRecord(data, rowIndex) {
     return createResponse(true, 'Record updated successfully');
   } catch (error) {
     return createResponse(false, 'Error updating record: ' + error.message);
+  }
+}
+
+// Update only status and sub-status
+function updateStatus(loanCode, status, subStatus, rowIndex) {
+  try {
+    const sheet = getSheet();
+    
+    // Verify the record exists at the specified row
+    const range = sheet.getRange(rowIndex, 1, 1, 8);
+    const rowData = range.getValues()[0];
+    
+    if (rowData[COLUMNS.LOAN_CODE] !== loanCode) {
+      return createResponse(false, 'Record verification failed');
+    }
+    
+    // Update only status and sub-status columns
+    sheet.getRange(rowIndex, COLUMNS.STATUS + 1).setValue(status);
+    sheet.getRange(rowIndex, COLUMNS.SUB_STATUS + 1).setValue(subStatus);
+    
+    return createResponse(true, 'Status updated successfully');
+  } catch (error) {
+    return createResponse(false, 'Error updating status: ' + error.message);
   }
 }
 
@@ -287,6 +314,7 @@ function getTodaysData() {
       
       if (recordDateStr === todayStr) {
         todaysRecords.push({
+          rowIndex: i + 1,
           timestamp: data[i][COLUMNS.TIMESTAMP],
           loanCode: data[i][COLUMNS.LOAN_CODE],
           applicationId: data[i][COLUMNS.APPLICATION_ID],
@@ -302,6 +330,43 @@ function getTodaysData() {
     return createResponse(true, 'Today\'s data retrieved', todaysRecords);
   } catch (error) {
     return createResponse(false, 'Error getting today\'s data: ' + error.message);
+  }
+}
+
+// Get all non-Hot Lead records
+function getNonHotLeadData() {
+  try {
+    const sheet = getSheet();
+    const data = sheet.getDataRange().getValues();
+    
+    if (data.length <= 1) {
+      return createResponse(true, 'No data found', []);
+    }
+    
+    const nonHotLeadRecords = [];
+    
+    // Skip header row
+    for (let i = 1; i < data.length; i++) {
+      const status = data[i][COLUMNS.STATUS];
+      
+      if (status !== 'Hot Lead') {
+        nonHotLeadRecords.push({
+          rowIndex: i + 1,
+          timestamp: data[i][COLUMNS.TIMESTAMP],
+          loanCode: data[i][COLUMNS.LOAN_CODE],
+          applicationId: data[i][COLUMNS.APPLICATION_ID],
+          name: data[i][COLUMNS.NAME],
+          mobileNumber: data[i][COLUMNS.MOBILE_NUMBER],
+          status: data[i][COLUMNS.STATUS],
+          subStatus: data[i][COLUMNS.SUB_STATUS],
+          remarks: data[i][COLUMNS.REMARKS]
+        });
+      }
+    }
+    
+    return createResponse(true, 'Non-Hot Lead data retrieved', nonHotLeadRecords);
+  } catch (error) {
+    return createResponse(false, 'Error getting non-Hot Lead data: ' + error.message);
   }
 }
 

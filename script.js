@@ -1,5 +1,5 @@
 // Configuration - Replace with your Google Apps Script Web App URL
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzW_qbadLs9WpuGNnaf4OE65BvicmBFv9eE7hVwwaukt_5txoNLPlkmuEsg9sTA9RGbeg/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwr16V4ytpsBzO0X1ZFGUGkgtitQBhhCOPxhtDJyM0pGNoPRDyFWiqeG7HxS5iKONtDnA/exec';
 
 // DOM Elements
 const modal = document.getElementById('modal');
@@ -16,22 +16,13 @@ let currentRowIndex = -1;
 document.addEventListener('DOMContentLoaded', function() {
     initializeEventListeners();
     initializeTheme();
-    loadTodayStatusCount();
-    loadTodaysData();
-    
-    // Auto-refresh every 30 seconds
-    setInterval(function() {
-        loadTodayStatusCount();
-        loadTodaysData();
-    }, 30000); // 30 seconds
+    refreshAllData();
 });
 
 // Event Listeners
 function initializeEventListeners() {
     // Action buttons
     document.getElementById('addNewBtn').addEventListener('click', openAddModal);
-    document.getElementById('updateBtn').addEventListener('click', openUpdateModal);
-    document.getElementById('deleteBtn').addEventListener('click', openDeleteModal);
     
     // Theme toggle
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
@@ -39,28 +30,40 @@ function initializeEventListeners() {
     // Search
     document.getElementById('searchBtn').addEventListener('click', performSearch);
     
+    // Quick Add Form
+    document.getElementById('quickAddForm').addEventListener('submit', handleQuickAdd);
+    
     // Modal controls
     document.querySelector('.close').addEventListener('click', closeModal);
-    document.querySelector('.close-update').addEventListener('click', closeUpdateModal);
+    document.querySelector('.close-status').addEventListener('click', closeStatusModal);
+    document.querySelector('.close-contest').addEventListener('click', closeContestModal);
     document.querySelector('.close-delete').addEventListener('click', closeDeleteModal);
     document.getElementById('cancelBtn').addEventListener('click', closeModal);
+    document.getElementById('cancelStatusBtn').addEventListener('click', closeStatusModal);
+    document.getElementById('cancelContestBtn').addEventListener('click', closeContestModal);
     document.getElementById('cancelDeleteBtn').addEventListener('click', closeDeleteModal);
     
     // Form submission
     recordForm.addEventListener('submit', handleFormSubmit);
+    document.getElementById('statusForm').addEventListener('submit', handleStatusUpdate);
+    document.getElementById('contestForm').addEventListener('submit', saveContest);
     
-    // Update functionality
-    document.getElementById('fetchUpdateBtn').addEventListener('click', fetchRecordForUpdate);
+    // Contest functionality
+    document.getElementById('addContestBtn').addEventListener('click', openContestModal);
+    document.getElementById('addSlabBtn').addEventListener('click', addSlab);
     
     // Delete functionality
+    document.getElementById('deleteRecordBtn').addEventListener('click', handleDeleteFromStatusModal);
     document.getElementById('fetchDeleteBtn').addEventListener('click', fetchRecordForDelete);
     document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
     
     // Close modals when clicking outside
-    const updateModal = document.getElementById('updateModal');
+    const statusModal = document.getElementById('updateStatusModal');
+    const contestModal = document.getElementById('contestModal');
     window.addEventListener('click', function(event) {
         if (event.target === modal) closeModal();
-        if (event.target === updateModal) closeUpdateModal();
+        if (event.target === statusModal) closeStatusModal();
+        if (event.target === contestModal) closeContestModal();
         if (event.target === deleteModal) closeDeleteModal();
     });
 }
@@ -71,6 +74,111 @@ function openAddModal() {
     document.getElementById('modalTitle').textContent = 'Add New Record';
     recordForm.reset();
     modal.style.display = 'block';
+}
+
+function closeStatusModal() {
+    document.getElementById('updateStatusModal').style.display = 'none';
+}
+
+function openStatusModal(loanCode, currentStatus, currentSubStatus, rowIndex) {
+    document.getElementById('statusLoanCode').value = loanCode;
+    document.getElementById('statusStatus').value = currentStatus;
+    document.getElementById('statusSubStatus').value = currentSubStatus;
+    window.currentStatusRowIndex = rowIndex;
+    document.getElementById('updateStatusModal').style.display = 'block';
+}
+
+function openStatusModalFromSearch(loanCode, currentStatus, currentSubStatus) {
+    showLoading();
+    fetchRecordByLoanCode(loanCode)
+        .then(record => {
+            if (record) {
+                openStatusModal(loanCode, currentStatus, currentSubStatus, record.rowIndex);
+            } else {
+                showMessage('Record not found', 'error');
+            }
+        })
+        .catch(error => {
+            showMessage('Error fetching record: ' + error.message, 'error');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function handleStatusUpdate(e) {
+    e.preventDefault();
+    
+    const loanCode = document.getElementById('statusLoanCode').value;
+    const status = document.getElementById('statusStatus').value;
+    const subStatus = document.getElementById('statusSubStatus').value;
+    
+    showLoading();
+    
+    const formData = new FormData();
+    formData.append('action', 'updateStatus');
+    formData.append('loanCode', loanCode);
+    formData.append('status', status);
+    formData.append('subStatus', subStatus);
+    formData.append('rowIndex', window.currentStatusRowIndex);
+    
+    fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            showMessage('Status updated successfully', 'success');
+            closeStatusModal();
+            refreshAllData();
+            hideSearchResults();
+            performSearch();
+        } else {
+            showMessage(result.message, 'error');
+        }
+    })
+    .catch(error => {
+        showMessage('Error updating status: ' + error.message, 'error');
+    })
+    .finally(() => {
+        hideLoading();
+    });
+}
+
+function handleDeleteFromStatusModal() {
+    const loanCode = document.getElementById('statusLoanCode').value;
+    
+    if (confirm(`Are you sure you want to delete record with Loan Code: ${loanCode}?`)) {
+        showLoading();
+        
+        const formData = new FormData();
+        formData.append('action', 'deleteRecord');
+        formData.append('loanCode', loanCode);
+        formData.append('rowIndex', window.currentStatusRowIndex);
+        
+        fetch(SCRIPT_URL, {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                showMessage('Record deleted successfully', 'success');
+                closeStatusModal();
+                refreshAllData();
+                hideSearchResults();
+            } else {
+                showMessage(result.message, 'error');
+            }
+        })
+        .catch(error => {
+            showMessage('Error deleting record: ' + error.message, 'error');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+    }
 }
 
 function openUpdateModal() {
@@ -217,6 +325,23 @@ function handleFormSubmit(event) {
 }
 
 // CRUD Operations
+function handleQuickAdd(e) {
+    e.preventDefault();
+    
+    const formData = {
+        loanCode: document.getElementById('quickLoanCode').value.trim(),
+        applicationId: document.getElementById('quickApplicationId').value.trim(),
+        name: document.getElementById('quickName').value.trim(),
+        mobileNumber: document.getElementById('quickMobileNumber').value.trim(),
+        status: document.getElementById('quickStatus').value,
+        subStatus: document.getElementById('quickSubStatus').value,
+        remarks: document.getElementById('quickRemarks').value.trim()
+    };
+    
+    addRecord(formData);
+    document.getElementById('quickAddForm').reset();
+}
+
 function addRecord(data) {
     showLoading();
     
@@ -233,8 +358,7 @@ function addRecord(data) {
         if (result.success) {
             showMessage('Record added successfully', 'success');
             closeModal();
-            loadTodayStatusCount();
-            loadTodaysData();
+            refreshAllData();
         } else {
             showMessage(result.message, 'error');
         }
@@ -264,8 +388,7 @@ function updateRecord(data) {
         if (result.success) {
             showMessage('Record updated successfully', 'success');
             closeModal();
-            loadTodayStatusCount();
-            loadTodaysData();
+            refreshAllData();
         } else {
             showMessage(result.message, 'error');
         }
@@ -350,6 +473,7 @@ function displaySearchResults(records) {
                         <th>Mobile Number</th>
                         <th>Status</th>
                         <th>Sub-Status</th>
+                        <th>Edit</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -365,6 +489,7 @@ function displaySearchResults(records) {
                     <td>${record.mobileNumber}</td>
                     <td><span class="status-badge ${record.status.toLowerCase().replace(' ', '-')}">${record.status}</span></td>
                     <td>${record.subStatus}</td>
+                    <td><button class="btn-edit" onclick="openStatusModalFromSearch('${record.loanCode}', '${record.status}', '${record.subStatus}')" title="Edit Status">✏️</button></td>
                 </tr>
             `;
         });
@@ -466,8 +591,7 @@ function confirmDelete() {
         if (result.success) {
             showMessage('Record deleted successfully', 'success');
             closeDeleteModal();
-            loadTodayStatusCount();
-            loadTodaysData();
+            refreshAllData();
         } else {
             showMessage(result.message, 'error');
         }
@@ -481,11 +605,11 @@ function confirmDelete() {
 }
 
 // Status Count Functions
-function loadTodayStatusCount(silent = false) {
+function loadTodayStatusCount() {
     const todayUrl = `${SCRIPT_URL}?action=getTodayStatusCount`;
     const totalUrl = `${SCRIPT_URL}?action=getTotalStatusCount`;
     
-    Promise.all([
+    return Promise.all([
         fetch(todayUrl, { method: 'GET' }).then(r => r.json()),
         fetch(totalUrl, { method: 'GET' }).then(r => r.json())
     ])
@@ -494,39 +618,20 @@ function loadTodayStatusCount(silent = false) {
             updateStatusCounts(todayResult.data, totalResult.data);
         }
     })
-    .catch(error => {
-        if (!silent) {
-            console.error('Error loading status counts:', error);
-        }
-    });
+    .catch(error => console.error('Error loading status counts:', error));
 }
 
-function loadTodaysData(silent = false) {
-    console.log('Loading today\'s data...');
+function loadTodaysData() {
     const url = `${SCRIPT_URL}?action=getTodaysData`;
     
-    fetch(url, {
-        method: 'GET'
-    })
-    .then(response => {
-        console.log('Response received:', response.status);
-        return response.json();
-    })
+    return fetch(url, { method: 'GET' })
+    .then(response => response.json())
     .then(result => {
-        console.log('Result:', result);
         if (result.success) {
             displayTodaysData(result.data);
-        } else {
-            if (!silent) {
-                console.error('Error from server:', result.message);
-            }
         }
     })
-    .catch(error => {
-        if (!silent) {
-            console.error('Error loading today\'s data:', error);
-        }
-    });
+    .catch(error => console.error('Error loading today\'s data:', error));
 }
 
 function displayTodaysData(records) {
@@ -548,9 +653,11 @@ function displayTodaysData(records) {
                 <tr>
                     <th>Time</th>
                     <th>Loan Code</th>
+                    <th>Application ID</th>
                     <th>Mobile Number</th>
                     <th>Status</th>
                     <th>Sub-Status</th>
+                    <th>Edit</th>
                 </tr>
             </thead>
             <tbody>
@@ -562,9 +669,72 @@ function displayTodaysData(records) {
             <tr>
                 <td><span class="time-badge">${time}</span></td>
                 <td>${record.loanCode}</td>
+                <td>${record.applicationId}</td>
                 <td>${record.mobileNumber}</td>
                 <td><span class="status-badge ${record.status.toLowerCase().replace(' ', '-')}">${record.status}</span></td>
                 <td>${record.subStatus}</td>
+                <td><button class="btn-edit" onclick="openStatusModal('${record.loanCode}', '${record.status}', '${record.subStatus}', ${record.rowIndex})" title="Edit Status">✏️</button></td>
+            </tr>
+        `;
+    });
+    
+    tableHTML += '</tbody></table>';
+    tableDiv.innerHTML = tableHTML;
+}
+
+function loadNonHotLeadData() {
+    const url = `${SCRIPT_URL}?action=getNonHotLeadData`;
+    
+    return fetch(url, { method: 'GET' })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            displayNonHotLeadData(result.data);
+        }
+    })
+    .catch(error => console.error('Error loading non-Hot Lead data:', error));
+}
+
+function displayNonHotLeadData(records) {
+    const tableDiv = document.getElementById('nonHotLeadTable');
+    
+    if (!tableDiv) {
+        console.error('nonHotLeadTable element not found');
+        return;
+    }
+    
+    if (records.length === 0) {
+        tableDiv.innerHTML = '<div class="empty-state"><p>📅 No non-Hot Lead records found.</p></div>';
+        return;
+    }
+    
+    let tableHTML = `
+        <table class="results-table">
+            <thead>
+                <tr>
+                    <th>Date & Time</th>
+                    <th>Loan Code</th>
+                    <th>Application ID</th>
+                    <th>Mobile Number</th>
+                    <th>Status</th>
+                    <th>Sub-Status</th>
+                    <th>Edit</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    records.forEach(record => {
+        const dateTime = new Date(record.timestamp).toLocaleString();
+        tableHTML += `
+            <tr>
+                <td><span class="time-badge">${dateTime}</span></td>
+                <td>${record.loanCode}</td>
+                <td>${record.applicationId}</td>
+                <td>${record.mobileNumber}</td>
+                <td><span class="status-badge ${record.status.toLowerCase().replace(' ', '-')}">${record.status}</span></td>
+                <td>${record.subStatus}</td>
+                <td><button class="btn-edit" onclick="openStatusModal('${record.loanCode}', '${record.status}', '${record.subStatus}', ${record.rowIndex})" title="Edit Status">✏️</button></td>
             </tr>
         `;
     });
@@ -620,6 +790,15 @@ function updateStatusCounts(todayCounts, totalCounts) {
 }
 
 // Utility Functions
+function refreshAllData() {
+    Promise.all([
+        loadTodayStatusCount(),
+        loadTodaysData(),
+        loadNonHotLeadData(),
+        loadContests()
+    ]);
+}
+
 function showLoading() {
     loading.style.display = 'flex';
 }
@@ -636,4 +815,284 @@ function showMessage(text, type) {
     setTimeout(() => {
         message.style.display = 'none';
     }, 5000);
+}
+
+// Contest Management
+let contests = [];
+let slabCount = 0;
+
+function loadContests() {
+    return fetch(`${SCRIPT_URL}?action=getContests`)
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                contests = result.data;
+                const today = new Date().toISOString().split('T')[0];
+                const expiredContests = contests.filter(c => c.endDate < today);
+                expiredContests.forEach(contest => deleteContestFromSheet(contest.id));
+                contests = contests.filter(c => c.endDate >= today);
+                displayContests();
+            }
+        })
+        .catch(error => console.error('Error loading contests:', error));
+}
+
+function openContestModal() {
+    document.getElementById('contestModal').style.display = 'block';
+    document.getElementById('contestForm').reset();
+    document.getElementById('slabsContainer').innerHTML = '';
+    slabCount = 0;
+    addSlab();
+}
+
+function closeContestModal() {
+    document.getElementById('contestModal').style.display = 'none';
+}
+
+function addSlab() {
+    slabCount++;
+    const container = document.getElementById('slabsContainer');
+    const slabDiv = document.createElement('div');
+    slabDiv.className = 'slab-section';
+    slabDiv.id = `slab${slabCount}`;
+    slabDiv.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h4>Slab ${slabCount}</h4>
+            <button type="button" class="btn-icon btn-delete" onclick="removeSlab(${slabCount})" title="Remove Slab">➖</button>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Daily Target:</label>
+                <input type="number" id="slab${slabCount}Daily" placeholder="e.g., ${slabCount * 2 + 2}">
+            </div>
+            <div class="form-group">
+                <label>Weekly Target:</label>
+                <input type="number" id="slab${slabCount}Weekly" placeholder="e.g., ${(slabCount * 2 + 2) * 6}">
+            </div>
+            <div class="form-group">
+                <label>Incentive (₹):</label>
+                <input type="number" id="slab${slabCount}Incentive" placeholder="e.g., ${1000 + slabCount * 1000}">
+            </div>
+        </div>
+    `;
+    container.appendChild(slabDiv);
+}
+
+function removeSlab(id) {
+    const slab = document.getElementById(`slab${id}`);
+    if (slab) slab.remove();
+}
+
+function saveContest(e) {
+    e.preventDefault();
+    const slabs = [];
+    document.querySelectorAll('.slab-section').forEach((slabEl, index) => {
+        const id = slabEl.id.replace('slab', '');
+        const daily = document.getElementById(`slab${id}Daily`).value;
+        const weekly = document.getElementById(`slab${id}Weekly`).value;
+        const incentive = document.getElementById(`slab${id}Incentive`).value;
+        if (daily && weekly && incentive) {
+            slabs.push({ name: `Slab ${index + 1}`, daily: parseInt(daily), weekly: parseInt(weekly), incentive: parseInt(incentive) });
+        }
+    });
+    if (slabs.length === 0) {
+        showMessage('Please add at least one slab with all fields filled!', 'error');
+        return;
+    }
+    const contest = {
+        id: Date.now(),
+        name: document.getElementById('contestName').value,
+        startDate: document.getElementById('startDate').value,
+        endDate: document.getElementById('endDate').value,
+        slabs: slabs
+    };
+    showLoading();
+    const formData = new FormData();
+    formData.append('action', 'saveContest');
+    formData.append('data', JSON.stringify(contest));
+    fetch(SCRIPT_URL, { method: 'POST', body: formData })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                closeContestModal();
+                loadContests();
+                showMessage('Contest added successfully!', 'success');
+            } else {
+                showMessage(result.message, 'error');
+            }
+        })
+        .catch(error => showMessage('Error saving contest: ' + error.message, 'error'))
+        .finally(() => hideLoading());
+}
+
+function deleteContest(id) {
+    if (confirm('Are you sure you want to delete this contest?')) {
+        showLoading();
+        const formData = new FormData();
+        formData.append('action', 'deleteContest');
+        formData.append('contestId', id);
+        fetch(SCRIPT_URL, { method: 'POST', body: formData })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    loadContests();
+                    showMessage('Contest deleted successfully!', 'success');
+                } else {
+                    showMessage(result.message, 'error');
+                }
+            })
+            .catch(error => showMessage('Error deleting contest: ' + error.message, 'error'))
+            .finally(() => hideLoading());
+    }
+}
+
+function deleteContestFromSheet(id) {
+    const formData = new FormData();
+    formData.append('action', 'deleteContest');
+    formData.append('contestId', id);
+    fetch(SCRIPT_URL, { method: 'POST', body: formData }).catch(() => {});
+}
+
+async function displayContests() {
+    const container = document.getElementById('activeContests');
+    if (contests.length === 0) {
+        container.innerHTML = '<div class="empty-state" style="padding: 40px;"><p>🏆 No active contests. Click "Add Contest" to create one!</p></div>';
+        return;
+    }
+    container.innerHTML = '';
+    for (const contest of contests) {
+        const card = await createContestCard(contest);
+        container.appendChild(card);
+    }
+}
+
+async function createContestCard(contest) {
+    const card = document.createElement('div');
+    card.className = 'contest-card';
+    const data = await fetchContestData(contest.startDate, contest.endDate);
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    const todayData = data.daily.find(d => d.date === todayStr);
+    const todayCount = todayData ? todayData.hotLeads : 0;
+    const weeklyTotal = data.weeklyTotal;
+    const startDate = new Date(contest.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    const endDate = new Date(contest.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    card.innerHTML = `
+        <div class="contest-header">
+            <div>
+                <div class="contest-title">${contest.name}</div>
+                <div class="contest-dates">📅 ${startDate} - ${endDate}</div>
+            </div>
+            <div class="contest-actions">
+                <button class="btn-icon btn-delete" onclick="deleteContest(${contest.id})" title="Delete Contest">🗑️</button>
+                <button class="btn-icon" onclick="loadContests()" title="Refresh Data" style="background: linear-gradient(135deg, #4facfe, #00f2fe); color: white;">🔄</button>
+            </div>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div>
+                <h4 style="margin: 0 0 10px 0; font-size: 1rem;">📅 Today: ${todayCount} HL</h4>
+                ${generateCompactSlabCards(todayCount, contest.slabs, 'daily')}
+            </div>
+            <div>
+                <h4 style="margin: 0 0 10px 0; font-size: 1rem;">📈 Weekly: ${weeklyTotal} HL</h4>
+                ${generateCompactSlabCards(weeklyTotal, contest.slabs, 'weekly')}
+            </div>
+        </div>
+    `;
+    return card;
+}
+
+function generateCompactSlabCards(count, slabs, type) {
+    let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+    slabs.forEach(slab => {
+        const target = type === 'daily' ? slab.daily : slab.weekly;
+        const achieved = count >= target;
+        const percentage = Math.min((count / target) * 100, 100);
+        const remaining = Math.max(0, target - count);
+        html += `
+            <div style="background: var(--card-bg); border: 2px solid ${achieved ? '#38ef7d' : 'var(--border-color)'}; border-radius: 10px; padding: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 1rem; font-weight: 700; color: var(--text-color);">${slab.name}</span>
+                    ${type === 'weekly' ? `<span style="background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); color: white; padding: 4px 12px; border-radius: 12px; font-size: 0.9rem; font-weight: 600;">₹${slab.incentive}</span>` : ''}
+                </div>
+                <div style="background: rgba(102, 126, 234, 0.1); border-radius: 8px; height: 28px; overflow: hidden; margin-bottom: 10px;">
+                    <div style="background: ${achieved ? 'linear-gradient(90deg, #11998e, #38ef7d)' : 'linear-gradient(90deg, #4facfe, #00f2fe)'}; height: 100%; width: ${percentage}%; display: flex; align-items: center; justify-content: center; font-size: 0.85rem; font-weight: 700; color: white; transition: width 0.5s ease;">${count}/${target}</div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 0.85rem;">
+                    <div style="text-align: center; padding: 6px; background: linear-gradient(135deg, rgba(56, 239, 125, 0.1), rgba(17, 153, 142, 0.1)); border-radius: 6px;">
+                        <div style="font-weight: 600; color: #38ef7d;">${count}</div>
+                        <div style="color: var(--text-light); font-size: 0.75rem;">Achieved</div>
+                    </div>
+                    <div style="text-align: center; padding: 6px; background: linear-gradient(135deg, rgba(255, 193, 7, 0.1), rgba(255, 152, 0, 0.1)); border-radius: 6px;">
+                        <div style="font-weight: 600; color: #ff9800;">${remaining}</div>
+                        <div style="color: var(--text-light); font-size: 0.75rem;">Remaining</div>
+                    </div>
+                    <div style="text-align: center; padding: 6px; background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-radius: 6px;">
+                        <div style="font-weight: 600; color: var(--primary-color);">${target}</div>
+                        <div style="color: var(--text-light); font-size: 0.75rem;">Target</div>
+                    </div>
+                </div>
+                ${achieved ? '<div style="text-align: center; color: #38ef7d; font-size: 0.85rem; margin-top: 8px; font-weight: 700; background: linear-gradient(135deg, rgba(56, 239, 125, 0.1), rgba(17, 153, 142, 0.1)); padding: 6px; border-radius: 6px;">✅ Target Achieved!</div>' : ''}
+            </div>
+        `;
+    });
+    html += '</div>';
+    return html;
+}
+
+function generateSlabCards(count, slabs, type) {
+    let html = '<div class="slab-container">';
+    slabs.forEach(slab => {
+        const target = type === 'daily' ? slab.daily : slab.weekly;
+        const achieved = count >= target;
+        const percentage = Math.min((count / target) * 100, 100);
+        html += `
+            <div class="slab-card ${achieved ? 'achieved' : ''}">
+                <div class="slab-header">
+                    <span class="slab-title">${slab.name}</span>
+                    <span class="slab-incentive">₹${slab.incentive}</span>
+                </div>
+                <div class="progress-bar-container">
+                    <div class="progress-bar ${achieved ? 'complete' : ''}" style="width: ${percentage}%">${count}/${target}</div>
+                </div>
+                <div class="slab-stats">
+                    <div class="stat-row"><span class="stat-label">Target:</span><span class="stat-value">${target} HL</span></div>
+                    <div class="stat-row"><span class="stat-label">Achieved:</span><span class="stat-value ${achieved ? 'achieved' : ''}">${count} HL</span></div>
+                    <div class="stat-row"><span class="stat-label">Remaining:</span><span class="stat-value">${Math.max(0, target - count)} HL</span></div>
+                </div>
+                ${achieved ? '<div class="achievement-badge">🎉 Target Achieved!</div>' : ''}
+            </div>
+        `;
+    });
+    html += '</div>';
+    return html;
+}
+
+function generateDailyTable(dailyData, slabs) {
+    let html = '<table class="daily-table"><thead><tr><th>Date</th><th>Day</th><th>Hot Leads</th>';
+    slabs.forEach((slab, index) => { html += `<th>Slab ${index + 1} (${slab.daily})</th>`; });
+    html += '</tr></thead><tbody>';
+    dailyData.forEach(day => {
+        const date = new Date(day.date);
+        const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const cellClass = day.hotLeads > 0 ? 'achieved-cell' : 'pending-cell';
+        html += `<tr><td>${dateStr}</td><td>${dayName}</td><td class="${cellClass}">${day.hotLeads}</td>`;
+        slabs.forEach(slab => { html += `<td>${day.hotLeads >= slab.daily ? '✅' : '❌'}</td>`; });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    return html;
+}
+
+async function fetchContestData(startDate, endDate) {
+    try {
+        const url = `${SCRIPT_URL}?action=getContestData&startDate=${startDate}&endDate=${endDate}`;
+        const response = await fetch(url);
+        const result = await response.json();
+        if (result.success) return result.data;
+        throw new Error(result.message);
+    } catch (error) {
+        return { daily: [], weeklyTotal: 0 };
+    }
 }
