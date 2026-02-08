@@ -1,5 +1,5 @@
 // Configuration - Replace with your Google Apps Script Web App URL
-const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwr16V4ytpsBzO0X1ZFGUGkgtitQBhhCOPxhtDJyM0pGNoPRDyFWiqeG7HxS5iKONtDnA/exec';
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzW_qbadLs9WpuGNnaf4OE65BvicmBFv9eE7hVwwaukt_5txoNLPlkmuEsg9sTA9RGbeg/exec';
 
 // DOM Elements
 const modal = document.getElementById('modal');
