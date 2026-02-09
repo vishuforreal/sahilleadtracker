@@ -484,11 +484,11 @@ function displaySearchResults(records) {
             tableHTML += `
                 <tr>
                     <td>${dateTime}</td>
-                    <td>${record.loanCode}</td>
-                    <td>${record.applicationId}</td>
-                    <td>${record.mobileNumber}</td>
+                    <td>${record.loanCode || ''}</td>
+                    <td>${record.applicationId || ''}</td>
+                    <td>${record.mobileNumber || ''}</td>
                     <td><span class="status-badge ${record.status.toLowerCase().replace(' ', '-')}">${record.status}</span></td>
-                    <td>${record.subStatus}</td>
+                    <td>${record.subStatus || ''}</td>
                     <td><button class="btn-edit" onclick="openStatusModalFromSearch('${record.loanCode}', '${record.status}', '${record.subStatus}')" title="Edit Status">✏️</button></td>
                 </tr>
             `;
@@ -668,11 +668,11 @@ function displayTodaysData(records) {
         tableHTML += `
             <tr>
                 <td><span class="time-badge">${time}</span></td>
-                <td>${record.loanCode}</td>
-                <td>${record.applicationId}</td>
-                <td>${record.mobileNumber}</td>
+                <td>${record.loanCode || ''}</td>
+                <td>${record.applicationId || ''}</td>
+                <td>${record.mobileNumber || ''}</td>
                 <td><span class="status-badge ${record.status.toLowerCase().replace(' ', '-')}">${record.status}</span></td>
-                <td>${record.subStatus}</td>
+                <td>${record.subStatus || ''}</td>
                 <td><button class="btn-edit" onclick="openStatusModal('${record.loanCode}', '${record.status}', '${record.subStatus}', ${record.rowIndex})" title="Edit Status">✏️</button></td>
             </tr>
         `;
@@ -729,11 +729,11 @@ function displayNonHotLeadData(records) {
         tableHTML += `
             <tr>
                 <td><span class="time-badge">${dateTime}</span></td>
-                <td>${record.loanCode}</td>
-                <td>${record.applicationId}</td>
-                <td>${record.mobileNumber}</td>
+                <td>${record.loanCode || ''}</td>
+                <td>${record.applicationId || ''}</td>
+                <td>${record.mobileNumber || ''}</td>
                 <td><span class="status-badge ${record.status.toLowerCase().replace(' ', '-')}">${record.status}</span></td>
-                <td>${record.subStatus}</td>
+                <td>${record.subStatus || ''}</td>
                 <td><button class="btn-edit" onclick="openStatusModal('${record.loanCode}', '${record.status}', '${record.subStatus}', ${record.rowIndex})" title="Edit Status">✏️</button></td>
             </tr>
         `;
